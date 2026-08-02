@@ -90,6 +90,39 @@ survive them.
 - [Scaling Kafka Streams for High-Volume Data Processing — Confluent](https://www.confluent.io/blog/scaling-kafka-streams/)
 - [How Real-Time Stream Processing Safely Scales with ksqlDB — Confluent](https://www.confluent.io/blog/how-real-time-stream-processing-safely-scales-with-ksqldb/)
 
+## Roadmap — Part 3: Distributed Data Patterns
+
+Part 1 was breadth, Part 2 is scale. Part 3 is *correctness patterns* for
+distributed systems built on Kafka — the standard, named answers to problems
+this project has already run into concretely: duplicate delivery (Stage 5),
+the dual-write problem (implicit whenever a service needs to update its own
+database *and* publish an event), and multi-service business processes with
+no single distributed transaction to rely on (Stage 6's whole pipeline).
+
+- [ ] **Stage 18** — Idempotent consumers & deduplication: redo Stage 5's
+  at-least-once crash experiment, but this time with a dedup layer (a
+  processed-IDs table with a unique constraint, checked and updated in the
+  same transaction as the side effect). Prove the exact same duplicate
+  delivery this time produces **no duplicate effect** — only a harmlessly
+  skipped reprocessing attempt.
+- [ ] **Stage 19** — Transactional Outbox Pattern: solve the dual-write
+  problem for a service that needs to update its own database *and*
+  reliably publish a Kafka event as one atomic unit. Write the business
+  change and an outbox row in the same local DB transaction, then use
+  Debezium (a Kafka Connect source connector purpose-built for CDC) to
+  reliably publish outbox rows to Kafka. Prove it survives a crash between
+  the DB commit and the publish — nothing lost, unlike a naive
+  "write-DB-then-call-Kafka" implementation.
+- [ ] **Stage 20** — Saga Pattern: extend Stage 6's `orders → payments →
+  inventory → shipping` chain — which is already a choreography-style saga
+  — with the compensating path it's currently missing. Right now,
+  `inventory-service` just skips a failed payment; it never *reverses* a
+  payment that succeeded when inventory reservation fails afterward. Add
+  that compensating `refund-payment` flow, trace both the happy path and the
+  failure/compensation path through the topics, and compare against an
+  orchestration-style version (one service explicitly sequencing every step
+  and every compensation, instead of each service reacting independently).
+
 ---
 
 ## Stage 0 — Environment setup
