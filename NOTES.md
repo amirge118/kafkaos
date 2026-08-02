@@ -90,7 +90,16 @@ survive them.
   (`traceparent`/`tracestate`), injected by the producer and extracted by the
   next consumer, so a single order can be traced end-to-end across all four
   services as one connected trace instead of four disconnected logs.
-- [ ] **Stage 19** — Large payloads & the claim-check pattern (bonus): prove
+- [ ] **Stage 19** — Prometheus + Grafana monitoring: the missing piece from
+  Stage 11's operations work — that stage used CLI/Kafka UI to check lag
+  and ISR by hand, on demand. This stage builds the thing you'd actually run
+  continuously in production: scrape broker JMX metrics (and consumer lag)
+  with Prometheus, and build real Grafana dashboards for lag, throughput, and
+  ISR health — the concrete, demonstrable answer to "do you know how to
+  operate this in production," distinct from OpenTelemetry (Stage 18, which
+  traces one message's journey) — this is fleet-level visibility, not
+  single-request tracing.
+- [ ] **Stage 20** — Large payloads & the claim-check pattern (bonus): prove
   why huge messages hurt throughput/latency, then implement
   store-a-reference-not-the-blob (payload in S3/blob storage, Kafka carries
   just a pointer).
@@ -141,13 +150,22 @@ the dual-write problem (implicit whenever a service needs to update its own
 database *and* publish an event), and multi-service business processes with
 no single distributed transaction to rely on (Stage 6's whole pipeline).
 
-- [ ] **Stage 20** — Idempotent consumers & deduplication: redo Stage 5's
+- [ ] **Stage 21** — Idempotent consumers & deduplication: redo Stage 5's
   at-least-once crash experiment, but this time with a dedup layer (a
   processed-IDs table with a unique constraint, checked and updated in the
   same transaction as the side effect). Prove the exact same duplicate
   delivery this time produces **no duplicate effect** — only a harmlessly
   skipped reprocessing attempt.
-- [ ] **Stage 21** — Transactional Outbox Pattern: solve the dual-write
+- [ ] **Stage 22** — Retry policies & DLQ with alerting: extend Stage 6's
+  services with a real application-level resilience pattern for a downstream
+  failure (e.g. a database write failing) — retry with backoff a bounded
+  number of times, and only after exhausting retries, route the message to a
+  dead-letter topic **and fire an alert** (not just log it, like Stage 8's
+  Connect-level DLQ did for malformed messages). Deliberately placed right
+  after Stage 21: safe retries depend on the consumer already being
+  idempotent, otherwise a retry is just a slower way to create the Stage 5
+  duplicate-effect problem again.
+- [ ] **Stage 23** — Transactional Outbox Pattern: solve the dual-write
   problem for a service that needs to update its own database *and*
   reliably publish a Kafka event as one atomic unit. Write the business
   change and an outbox row in the same local DB transaction, then use
@@ -155,7 +173,7 @@ no single distributed transaction to rely on (Stage 6's whole pipeline).
   reliably publish outbox rows to Kafka. Prove it survives a crash between
   the DB commit and the publish — nothing lost, unlike a naive
   "write-DB-then-call-Kafka" implementation.
-- [ ] **Stage 22** — Saga Pattern: extend Stage 6's `orders → payments →
+- [ ] **Stage 24** — Saga Pattern: extend Stage 6's `orders → payments →
   inventory → shipping` chain — which is already a choreography-style saga
   — with the compensating path it's currently missing. Right now,
   `inventory-service` just skips a failed payment; it never *reverses* a
@@ -164,6 +182,49 @@ no single distributed transaction to rely on (Stage 6's whole pipeline).
   failure/compensation path through the topics, and compare against an
   orchestration-style version (one service explicitly sequencing every step
   and every compensation, instead of each service reacting independently).
+
+## Roadmap — Part 4: The Capstone
+
+Parts 1–3 are 24 individually-learned stages. Part 4 is not a new technical
+topic — it's **assembly**: taking the pieces that are actually meant to work
+*together* and combining them into one coherent, named, production-shaped
+reference system, instead of 24 separate exercises that happen to share a
+repo. This is the thing to actually walk through in an interview or point to
+from a CV — not "I did 24 Kafka exercises," but "here's a distributed system
+I built, and here's exactly how it handles duplicate messages, downstream
+failures, and partial rollbacks, and here's the dashboard that shows it
+working."
+
+- [ ] **Stage 25 — The Capstone**: assemble a single, named, cohesively
+  documented system out of the pieces already built for exactly this
+  purpose:
+  - **Business backbone**: Stage 6's four services (`order` / `payment` /
+    `inventory` / `shipping`), unchanged in intent
+  - **Reliable event publishing**: Stage 23's Transactional Outbox, so each
+    service's own DB write and its published event are never inconsistent
+  - **Consumer resilience**: Stage 21's idempotent consumers + Stage 22's
+    retry/DLQ/alerting, so failures degrade gracefully instead of silently
+    corrupting or duplicating state
+  - **Correctness under partial failure**: Stage 24's Saga compensation path
+    (a failed inventory reservation actually refunds the payment, not just
+    logs a skip)
+  - **Observability**: Stage 18's OpenTelemetry tracing (follow one order
+    end-to-end across all four services as a single trace) + Stage 19's
+    Prometheus/Grafana dashboards (fleet-level lag/throughput/ISR health)
+  - **Scale-informed configuration**: producer/consumer settings and
+    partitioning choices that reflect what Stages 13–17 actually measured,
+    not defaults
+  - **A real deliverable, not just code**: a dedicated top-level
+    `ARCHITECTURE.md` (or a rewritten `README.md`) describing this as one
+    product with a name, an architecture diagram, and a single
+    `docker compose up` path to seeing it work end-to-end — written for
+    someone who has never read `NOTES.md`, unlike everything else in this
+    repo, which assumes the reader is following the whole journey.
+
+  Naming and the exact architecture diagram are still open — worth deciding
+  once Stages 13–24 are actually built and we know precisely what's real
+  enough to assemble, rather than designing the capstone before the parts
+  that compose it exist.
 
 ---
 
