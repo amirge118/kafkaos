@@ -26,7 +26,30 @@ Stages are built one at a time, on request — nothing below is built ahead of t
 - [x] **Stage 9** — Stream processing with ksqlDB (windowed aggregations, joins)
 - [x] **Stage 10** — Transactions / exactly-once semantics
 - [x] **Stage 11** — Monitoring & operations (lag, multi-broker, leader election, ISR)
-- [x] **Stage 12** — Failure testing (kill brokers/consumers, verify guarantees hold) (this entry — final stage)
+- [x] **Stage 12** — Failure testing (kill brokers/consumers, verify guarantees hold) — end of Part 1
+
+## Roadmap — Part 2: Scale & Performance
+
+Part 1 (Stages 0–12) was about *breadth* — the features and failure modes of
+Kafka. Part 2 is about *scale* — how the same mechanisms behave, and what
+changes, when the volume of data goes from "a few test messages" to "millions
+of messages," and how the right approach depends on the shape of the data
+itself (key cardinality, statefulness, message size), not just the volume.
+
+- [ ] **Stage 13** — Load testing & producer/consumer tuning: real throughput
+  measurement on our own cluster (messages/sec, MB/sec), then tune
+  `batch.size`, `linger.ms`, `compression.type`, and `acks` and measure the
+  actual before/after difference, not the theoretical one.
+- [ ] **Stage 14** — Partitioning strategy under skewed data: deliberately
+  create a hot-key scenario, watch one partition/consumer become the
+  bottleneck no matter how many instances are added, then fix it (key
+  salting / custom partitioner) and measure the improvement.
+- [ ] **Stage 15** — Scaling stateful processing: extend the Stage 9 ksqlDB
+  (or raw Kafka Streams) work to see how state gets distributed/rebalanced
+  as processing instances are added or removed under real load.
+- [ ] **Stage 16** — Large payloads & the claim-check pattern: prove why huge
+  messages hurt throughput/latency, then implement store-a-reference,
+  not-the-blob (payload in S3/blob storage, Kafka carries just a pointer).
 
 ---
 
