@@ -1,0 +1,27 @@
+{
+  "type": "record",
+  "name": "Order",
+  "namespace": "kafkaos.orders",
+  "fields": [
+    { "name": "orderId", "type": "string" },
+    { "name": "customerId", "type": "string" },
+    {
+      "name": "items",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "OrderItem",
+          "fields": [
+            { "name": "sku", "type": "string" },
+            { "name": "qty", "type": "int" }
+          ]
+        }
+      }
+    },
+    { "name": "total", "type": "double" },
+    { "name": "status", "type": "string" },
+    { "name": "discountCode", "type": ["null", "string"], "default": null },
+    { "name": "shippingAddress", "type": "string" }
+  ]
+}

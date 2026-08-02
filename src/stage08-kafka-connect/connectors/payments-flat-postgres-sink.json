@@ -1,0 +1,20 @@
+{
+    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+    "connection.password": "kafkaos",
+    "tasks.max": "1",
+    "topics": "payments-flat",
+    "value.converter.schema.registry.url": "http://schema-registry:8081",
+    "auto.evolve": "true",
+    "connection.user": "kafkaos",
+    "errors.deadletterqueue.topic.name": "payments-flat-sink-dlq",
+    "name": "payments-flat-postgres-sink",
+    "errors.tolerance": "all",
+    "errors.deadletterqueue.topic.replication.factor": "1",
+    "auto.create": "true",
+    "connection.url": "jdbc:postgresql://postgres:5432/kafkaos",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "insert.mode": "insert",
+    "errors.log.enable": "true",
+    "pk.mode": "none",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter"
+}

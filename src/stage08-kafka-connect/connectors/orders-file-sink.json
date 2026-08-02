@@ -1,0 +1,14 @@
+{
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSinkConnector",
+    "file": "/data/orders-sink.txt",
+    "tasks.max": "1",
+    "topics": "orders",
+    "errors.deadletterqueue.topic.name": "orders-file-sink-dlq",
+    "value.converter.schemas.enable": "false",
+    "name": "orders-file-sink",
+    "errors.tolerance": "all",
+    "errors.deadletterqueue.topic.replication.factor": "1",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "errors.log.enable": "true",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter"
+}

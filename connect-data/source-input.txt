@@ -1,0 +1,5 @@
+hello from the filesystem
+this line became a real Kafka message
+no producer code was written for this
+a line you can type yourself
+my first manual kafka message

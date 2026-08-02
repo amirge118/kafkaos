@@ -1,0 +1,31 @@
+{
+  "name": "kafkaos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Step-by-step Kafka learning project (e-commerce order flow)",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "produce": "ts-node src/stage02-producer/producer.ts",
+    "consume": "ts-node src/stage03-04-consumer-groups/consumer.ts",
+    "produce:acks": "ts-node src/stage05-delivery-semantics/producer-acks.ts",
+    "produce:idempotence": "ts-node src/stage05-delivery-semantics/producer-idempotence.ts",
+    "consume:semantics": "ts-node src/stage05-delivery-semantics/consumer-semantics.ts",
+    "svc:payment": "ts-node src/stage06-event-flow/payment-service.ts",
+    "svc:inventory": "ts-node src/stage06-event-flow/inventory-service.ts",
+    "svc:shipping": "ts-node src/stage06-event-flow/shipping-service.ts",
+    "produce:avro": "ts-node src/stage07-schema-registry/producer-avro.ts",
+    "consume:avro": "ts-node src/stage07-schema-registry/consumer-avro.ts",
+    "produce:flat-payments": "ts-node src/stage08-kafka-connect/produce-flat-payments.ts",
+    "process:transactional": "ts-node src/stage10-transactions/transactional-processor.ts"
+  },
+  "dependencies": {
+    "@kafkajs/confluent-schema-registry": "^4.1.0",
+    "kafkajs": "^2.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.0"
+  }
+}

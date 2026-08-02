@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "name": "PaymentFlat",
+  "namespace": "kafkaos.payments",
+  "fields": [
+    { "name": "orderId", "type": "string" },
+    { "name": "amount", "type": "double" },
+    { "name": "status", "type": "string" },
+    { "name": "processedAt", "type": "string" }
+  ]
+}

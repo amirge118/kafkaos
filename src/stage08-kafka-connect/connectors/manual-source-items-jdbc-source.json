@@ -1,0 +1,16 @@
+{
+    "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
+    "incrementing.column.name": "id",
+    "connection.password": "kafkaos",
+    "tasks.max": "1",
+    "table.whitelist": "manual_source_items",
+    "mode": "incrementing",
+    "value.converter.schema.registry.url": "http://schema-registry:8081",
+    "topic.prefix": "pg-",
+    "connection.user": "kafkaos",
+    "poll.interval.ms": "2000",
+    "name": "manual-source-items-jdbc-source",
+    "connection.url": "jdbc:postgresql://postgres:5432/kafkaos",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter"
+}

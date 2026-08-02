@@ -1,0 +1,9 @@
+{
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "file": "/data/source-input.txt",
+    "tasks.max": "1",
+    "name": "manual-events-source",
+    "topic": "manual-events",
+    "value.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter"
+}

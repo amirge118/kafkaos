@@ -1,0 +1,26 @@
+{total=15, orderId=order-2, customerId=cust-B, items=[{qty=1, sku=sku-200}], status=created}
+{total=89.97, orderId=order-3, customerId=cust-C, items=[{qty=3, sku=sku-300}], status=created}
+{total=30, orderId=order-6, customerId=cust-B, items=[{qty=2, sku=sku-200}], status=created}
+{total=15, orderId=order-2, customerId=cust-B, items=[{qty=1, sku=sku-200}], status=updated}
+{total=15, orderId=order-2, customerId=cust-B, items=[{qty=1, sku=sku-200}], status=created}
+{total=89.97, orderId=order-3, customerId=cust-C, items=[{qty=3, sku=sku-300}], status=created}
+{total=30, orderId=order-6, customerId=cust-B, items=[{qty=2, sku=sku-200}], status=created}
+{total=15, orderId=order-2, customerId=cust-B, items=[{qty=1, sku=sku-200}], status=updated}
+{total=39.98, orderId=order-1, customerId=cust-A, items=[{qty=2, sku=sku-100}], status=created}
+{total=39.98, orderId=order-1, customerId=cust-A, items=[{qty=2, sku=sku-100}], status=updated}
+{total=39.98, orderId=order-1, customerId=cust-A, items=[{qty=2, sku=sku-100}], status=created}
+{total=39.98, orderId=order-1, customerId=cust-A, items=[{qty=2, sku=sku-100}], status=updated}
+{total=19.99, orderId=order-4, customerId=cust-A, items=[{qty=1, sku=sku-100}], status=created}
+{total=250, orderId=order-5, customerId=cust-D, items=[{qty=5, sku=sku-400}], status=created}
+{total=19.99, orderId=order-4, customerId=cust-A, items=[{qty=1, sku=sku-100}], status=created}
+{total=250, orderId=order-5, customerId=cust-D, items=[{qty=5, sku=sku-400}], status=created}
+{total=42.5, orderId=order-manual-test, customerId=cust-Z, items=[{qty=1, sku=sku-999}], status=created}
+{total=55, orderId=order-manual-test, customerId=cust-Z, items=[{qty=1, sku=sku-555}], status=created}
+{total=11, orderId=order-manual-test, customerId=cust-Z, items=[{qty=1, sku=sku-111}], status=created}{total=120.0, orderId=order-live-demo, customerId=cust-LIVE, items=[{qty=3, sku=sku-777}], status=created}
+{total=25.5, orderId=order-ui-test, customerId=cust-UI, items=[{qty=1, sku=sku-1}], status=created}
+{total=39.98, orderId=order-1, customerId=cust-A, items=[{qty=2, sku=sku-100}], status=created}
+{total=39.98, orderId=test-1, customerId=cust-A, items=[{qty=2, sku=sku-100}], status=created}
+{total=39.98, orderId=order-1, customerId=cust-A, items=[{qty=2, sku=sku-100}], status=created}
+{total=39.98, orderId=testtt-1, customerId=test-A, items=[{qty=2, sku=sku-111}], status=created}
+{total=77.77, orderId=order-ksql-live, customerId=cust-KSQL, items=[{qty=1, sku=sku-42}], status=created}
+{total=88.88, orderId=order-all-tables, customerId=cust-ALL, items=[{qty=2, sku=sku-100}], status=created}
