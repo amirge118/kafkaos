@@ -71,10 +71,44 @@ survive them.
   gets distributed/rebalanced as processing instances are added or removed
   under real load — co-partitioning requirements become sharper at scale,
   not easier.
-- [ ] **Stage 17** — Large payloads & the claim-check pattern (bonus): prove
+- [ ] **Stage 17** — Redpanda: same code, different broker. Redpanda speaks
+  the exact same Kafka wire protocol — our existing `kafkajs` code should run
+  against it with zero code changes, just a different Docker image in
+  `docker-compose.yml`. The point isn't "switch platforms," it's a cheap,
+  concrete way to see which parts of what we've learned are *Kafka-the-API*
+  versus *Kafka-the-implementation*: rerun Stage 13's load tests unmodified
+  against Redpanda and compare real numbers and operational feel (C++/
+  thread-per-core vs. JVM, single binary, no separate controller quorum to
+  reason about). Worth noting going in: Kafka 4.0's KRaft mode already closed
+  much of the operational-simplicity gap Redpanda was originally built to
+  exploit — part of this stage is checking whether that's still true.
+- [ ] **Stage 18** — Distributed tracing with OpenTelemetry: extend the
+  Stage 6 pipeline (`orders → payments → inventory → shipping`) with real
+  distributed tracing, not just the lag/replication monitoring from Stage 11.
+  Kafka has no built-in equivalent of an HTTP request header for this —
+  context has to be propagated explicitly through message headers
+  (`traceparent`/`tracestate`), injected by the producer and extracted by the
+  next consumer, so a single order can be traced end-to-end across all four
+  services as one connected trace instead of four disconnected logs.
+- [ ] **Stage 19** — Large payloads & the claim-check pattern (bonus): prove
   why huge messages hurt throughput/latency, then implement
   store-a-reference-not-the-blob (payload in S3/blob storage, Kafka carries
   just a pointer).
+
+### Considered, deliberately not added: Apache Pulsar
+
+Pulsar separates storage (Apache BookKeeper) from compute (stateless
+brokers) and offers genuine multi-tenancy and geo-replication strengths Kafka
+doesn't match as directly. But it's an architecturally different system, not
+API-compatible with Kafka (unlike Redpanda) — adding it properly would mean
+a parallel implementation, not a cheap extension. Research is consistent that
+**Kafka remains the stronger fit specifically for high-throughput event
+streaming with predictable scaling needs — financial systems and real-time
+pipelines**, which is this project's own domain (and this project owner's
+actual professional background: insurance/fintech backend work). Pulsar's
+strengths — multi-tenancy, geo-replication, diverse cloud-native messaging
+patterns — matter more for a different kind of platform team problem.
+Revisit if a concrete reason to need those specific strengths ever comes up.
 
 ### Sources consulted for this revision
 
@@ -89,6 +123,14 @@ survive them.
 - [Real-Time User Behavior Analytics at Scale with Kafka and ClickHouse — Medium](https://medium.com/@alireza.mousavizade/real-time-user-behavior-analytics-at-scale-with-kafka-and-clickhouse-cf3107a30728)
 - [Scaling Kafka Streams for High-Volume Data Processing — Confluent](https://www.confluent.io/blog/scaling-kafka-streams/)
 - [How Real-Time Stream Processing Safely Scales with ksqlDB — Confluent](https://www.confluent.io/blog/how-real-time-stream-processing-safely-scales-with-ksqldb/)
+- [Apache Kafka vs. Apache Pulsar: Differences & Comparison — AutoMQ](https://www.automq.com/blog/apache-kafka-vs-apache-pulsar-differences-comparison)
+- [Kafka vs Pulsar: Architecture Compared — Conduktor](https://www.conduktor.io/glossary/kafka-vs-pulsar)
+- [Apache Kafka® vs. Apache Pulsar™ Comparison — Instaclustr](https://www.instaclustr.com/blog/kafka-versus-pulsar/)
+- [Redpanda vs Kafka: Architecture, Trade-offs — Conduktor](https://www.conduktor.io/glossary/redpanda-vs-kafka)
+- [Redpanda vs Kafka 2026: Real Latency & Cost Analysis — AutoMQ](https://www.automq.com/blog/redpanda-vs-kafka-benchmark-cost-analysis)
+- [Kafka vs Redpanda: Real Benchmarks on Identical Hardware — ComputingForGeeks](https://computingforgeeks.com/kafka-vs-redpanda-benchmarks/)
+- [Kafka with OpenTelemetry: Distributed Tracing Guide — Last9](https://last9.io/blog/kafka-with-opentelemetry/)
+- [Distributed Tracing for Kafka Applications — Conduktor](https://www.conduktor.io/glossary/distributed-tracing-for-kafka-applications)
 
 ## Roadmap — Part 3: Distributed Data Patterns
 
@@ -99,13 +141,13 @@ the dual-write problem (implicit whenever a service needs to update its own
 database *and* publish an event), and multi-service business processes with
 no single distributed transaction to rely on (Stage 6's whole pipeline).
 
-- [ ] **Stage 18** — Idempotent consumers & deduplication: redo Stage 5's
+- [ ] **Stage 20** — Idempotent consumers & deduplication: redo Stage 5's
   at-least-once crash experiment, but this time with a dedup layer (a
   processed-IDs table with a unique constraint, checked and updated in the
   same transaction as the side effect). Prove the exact same duplicate
   delivery this time produces **no duplicate effect** — only a harmlessly
   skipped reprocessing attempt.
-- [ ] **Stage 19** — Transactional Outbox Pattern: solve the dual-write
+- [ ] **Stage 21** — Transactional Outbox Pattern: solve the dual-write
   problem for a service that needs to update its own database *and*
   reliably publish a Kafka event as one atomic unit. Write the business
   change and an outbox row in the same local DB transaction, then use
@@ -113,7 +155,7 @@ no single distributed transaction to rely on (Stage 6's whole pipeline).
   reliably publish outbox rows to Kafka. Prove it survives a crash between
   the DB commit and the publish — nothing lost, unlike a naive
   "write-DB-then-call-Kafka" implementation.
-- [ ] **Stage 20** — Saga Pattern: extend Stage 6's `orders → payments →
+- [ ] **Stage 22** — Saga Pattern: extend Stage 6's `orders → payments →
   inventory → shipping` chain — which is already a choreography-style saga
   — with the compensating path it's currently missing. Right now,
   `inventory-service` just skips a failed payment; it never *reverses* a
