@@ -36,20 +36,59 @@ changes, when the volume of data goes from "a few test messages" to "millions
 of messages," and how the right approach depends on the shape of the data
 itself (key cardinality, statefulness, message size), not just the volume.
 
+Revised after research into current (2026) real-world practice — one real
+correction to the original plan (Stage 14) and one new centerpiece stage
+added (Stage 15), specifically aimed at this project's actual goal: the
+professional ability to receive and analyze millions of messages, not just
+survive them.
+
 - [ ] **Stage 13** — Load testing & producer/consumer tuning: real throughput
   measurement on our own cluster (messages/sec, MB/sec), then tune
-  `batch.size`, `linger.ms`, `compression.type`, and `acks` and measure the
-  actual before/after difference, not the theoretical one.
+  `batch.size`, `linger.ms` (~10–100ms is the usual sweet spot),
+  `compression.type` (`zstd` is the modern default — better ratio than `lz4`
+  at acceptable CPU cost on Kafka 3.0+), and `acks`, measuring the actual
+  before/after difference, not the theoretical one.
 - [ ] **Stage 14** — Partitioning strategy under skewed data: deliberately
-  create a hot-key scenario, watch one partition/consumer become the
-  bottleneck no matter how many instances are added, then fix it (key
-  salting / custom partitioner) and measure the improvement.
-- [ ] **Stage 15** — Scaling stateful processing: extend the Stage 9 ksqlDB
-  (or raw Kafka Streams) work to see how state gets distributed/rebalanced
-  as processing instances are added or removed under real load.
-- [ ] **Stage 16** — Large payloads & the claim-check pattern: prove why huge
-  messages hurt throughput/latency, then implement store-a-reference,
-  not-the-blob (payload in S3/blob storage, Kafka carries just a pointer).
+  create a hot-key scenario and prove the counter-intuitive fact directly —
+  **adding more partitions does not fix a single hot key**, since that key
+  always hashes to the same partition regardless of partition count. Fix it
+  with key salting instead, and measure the improvement. Also apply the
+  practical methodology found in research: measure real key distribution,
+  simulate partition assignment before committing to a key, keep any single
+  partition under ~20% of total traffic, and overprovision partition count to
+  ~2–3x the planned consumer instance count.
+- [ ] **Stage 15** — Kafka → ClickHouse: a real analytics pipeline for
+  millions of events. The centerpiece of "receive and analyze millions of
+  messages" as an actual professional capability, not just an ingestion
+  exercise — directly extends Stage 8's Postgres/Connect work with an
+  OLAP-oriented store built for exactly this. Stand up ClickHouse, wire it to
+  a Kafka topic via the canonical pattern (Kafka Engine table → Materialized
+  View → `MergeTree` storage table), ingest millions of synthetic events, and
+  run real analytical aggregation queries against them — compare against the
+  alternative of a Kafka Connect ClickHouse sink connector.
+- [ ] **Stage 16** — Scaling stateful processing: extend the Stage 9 ksqlDB
+  (or raw Kafka Streams) work to see how state (backed by RocksDB locally)
+  gets distributed/rebalanced as processing instances are added or removed
+  under real load — co-partitioning requirements become sharper at scale,
+  not easier.
+- [ ] **Stage 17** — Large payloads & the claim-check pattern (bonus): prove
+  why huge messages hurt throughput/latency, then implement
+  store-a-reference-not-the-blob (payload in S3/blob storage, Kafka carries
+  just a pointer).
+
+### Sources consulted for this revision
+
+- [Kafka Performance Tuning Guide — Conduktor](https://www.conduktor.io/glossary/kafka-performance-tuning-guide)
+- [How to Tune Kafka for Million Messages Per Second — OneUptime](https://oneuptime.com/blog/post/2026-01-25-tune-kafka-million-messages-per-second/view)
+- [Maximizing Kafka Throughput — RisingWave](https://risingwave.com/blog/maximizing-kafka-throughput-a-comprehensive-guide/)
+- [Kafka Partition Strategy: How to Design for Scale — Zeliot](https://www.zeliot.in/blog/kafka-partition-strategy-how-to-design-for-scale)
+- [Apache Kafka Partition Strategy — Confluent](https://www.confluent.io/learn/kafka-partition-strategy/)
+- [Handling Hot Partitions in Kafka — Medium](https://medium.com/@natesh.somanna/handling-hot-partitions-in-kafka-c7b41b36c929)
+- [Kafka to ClickHouse: 3 Ingestion Methods Compared — Glassflow](https://www.glassflow.dev/blog/kafka-to-clickhouse)
+- [How Braze rebuilt its real-time analytics pipeline with ClickHouse Cloud](https://clickhouse.com/blog/how-braze-rebuilt-real-time-analytics-pipeline-with-clickHouse-cloud)
+- [Real-Time User Behavior Analytics at Scale with Kafka and ClickHouse — Medium](https://medium.com/@alireza.mousavizade/real-time-user-behavior-analytics-at-scale-with-kafka-and-clickhouse-cf3107a30728)
+- [Scaling Kafka Streams for High-Volume Data Processing — Confluent](https://www.confluent.io/blog/scaling-kafka-streams/)
+- [How Real-Time Stream Processing Safely Scales with ksqlDB — Confluent](https://www.confluent.io/blog/how-real-time-stream-processing-safely-scales-with-ksqldb/)
 
 ---
 
