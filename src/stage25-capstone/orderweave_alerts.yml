@@ -1,0 +1,15 @@
+groups:
+  - name: orderweave
+    rules:
+      - alert: OrderweaveConsumerLagHigh
+        # Same lookback/eval-interval lesson learned the hard way in Stage
+        # 22: evaluation_interval is already 5s project-wide (see
+        # prometheus.yml), so this rule inherits that fix rather than
+        # needing to rediscover it.
+        expr: kafka_consumergroup_lag{consumergroup="payment-service"} > 20
+        for: 10s
+        labels:
+          severity: warning
+        annotations:
+          summary: "payment-service consumer lag is climbing"
+          description: "payment-service lag is {{ $value }}, above the 20-message threshold — likely means the service is down or falling behind under load."

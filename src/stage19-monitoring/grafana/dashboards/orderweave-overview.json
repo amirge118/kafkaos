@@ -1,0 +1,71 @@
+{
+  "title": "Orderweave — Capstone Overview (Stage 25)",
+  "uid": "orderweave-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "time": { "from": "now-15m", "to": "now" },
+  "refresh": "5s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Pipeline funnel — event rate by topic",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum by (topic) (rate(kafka_topic_partition_current_offset{topic=~\"orders|payments|inventory|shipping\"}[1m]))",
+          "legendFormat": "{{topic}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Compensation rate (refunds issued)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(orderweave_compensations_total[1m]))",
+          "legendFormat": "compensations/sec"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "DLQ messages",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum by (service) (orderweave_dlq_messages_total)",
+          "legendFormat": "{{service}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Duplicate vs applied outcome ratio",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum by (service, outcome) (rate(orderweave_events_processed_total[1m]))",
+          "legendFormat": "{{service}} — {{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Consumer lag by group (payment/inventory/shipping)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum by (consumer_group) (kafka_consumergroup_lag{consumer_group=~\"payment-service|inventory-service|shipping-service\"})",
+          "legendFormat": "{{consumer_group}}"
+        }
+      ]
+    }
+  ]
+}

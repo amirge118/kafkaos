@@ -62,11 +62,27 @@ services:
     image: postgres:16-alpine
     container_name: postgres
     ports:
-      - "5432:5432"
+      # Host-side 5433, not 5432: this Mac already has a native Postgres
+      # listening on 127.0.0.1:5432, silently winning every "localhost"
+      # connection over Docker's forwarded port — every prior stage's
+      # `docker exec postgres psql` worked fine (goes straight into the
+      # container, no host networking involved), but the first real
+      # host-side TCP client (Stage 21's pg.Pool) hit the wrong server
+      # entirely and got a genuine "role kafkaos does not exist" error.
+      # See NOTES.md Stage 21. Container-internal traffic (Adminer, Kafka
+      # Connect's JDBC sink) is unaffected — they use the Docker network's
+      # `postgres:5432`, not the host port.
+      - "5433:5432"
     environment:
       POSTGRES_USER: kafkaos
       POSTGRES_PASSWORD: kafkaos
       POSTGRES_DB: kafkaos
+    # Stage 23: Debezium reads Postgres's write-ahead log directly (logical
+    # replication), not by polling tables — needs wal_level=logical, which
+    # Postgres defaults to "replica" (replication-for-failover only, no
+    # logical decoding). Requires a real restart to take effect, unlike a
+    # plain config-table change.
+    command: ["postgres", "-c", "wal_level=logical"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U kafkaos"]
       interval: 5s
@@ -122,6 +138,12 @@ services:
       - -c
       - |
         confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:10.7.4
+        confluent-hub install --no-prompt clickhouse/clickhouse-kafka-connect:latest
+        # Not :latest (3.2.6) — that build targets Java 17 class files
+        # (UnsupportedClassVersionError against this image's Java 11 JRE,
+        # confirmed for real in the Connect worker logs). 2.5.4 is the
+        # newest version still compiled for Java 11.
+        confluent-hub install --no-prompt debezium/debezium-connector-postgresql:2.5.4
         /etc/confluent/docker/run
     depends_on:
       kafka:
@@ -142,6 +164,71 @@ services:
       # Lets us CREATE STREAM ... AS SELECT ... starting from the earliest
       # offset by default, instead of only seeing events from now on.
       KSQL_KSQL_STREAMS_AUTO_OFFSET_RESET: earliest
+      # Without this, ksqlDB self-advertises its raw container hostname
+      # (e.g. a random ID like bbbe5b54f536) to peers for the heartbeat/
+      # cluster-status protocol below — unresolvable by other containers.
+      # container_name IS resolvable via Compose's DNS, so use that.
+      KSQL_KSQL_ADVERTISED_LISTENER: http://ksqldb-server:8088
+      # Needed for /clusterStatus (per-server, per-partition task
+      # assignment) to exist at all — off by default in open-source
+      # ksqlDB, and this stage's whole point is watching that
+      # assignment move as servers join/leave.
+      KSQL_KSQL_HEARTBEAT_ENABLE: "true"
+      KSQL_KSQL_LAG_REPORTING_ENABLE: "true"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_started
+
+  # --- Stage 16: two more ksqlDB nodes, same KSQL_KSQL_SERVICE_ID as
+  # ksqldb-server above — that shared service ID is what makes these three
+  # servers one logical cluster (it becomes the underlying Kafka Streams
+  # application.id / consumer group), so persistent queries' per-partition
+  # tasks get split across however many of these three are alive at any
+  # moment, via the same rebalance protocol from Stage 4.
+  ksqldb-server-2:
+    image: confluentinc/ksqldb-server:0.29.0
+    container_name: ksqldb-server-2
+    ports:
+      - "8089:8088"
+    environment:
+      KSQL_BOOTSTRAP_SERVERS: kafka:19092
+      KSQL_LISTENERS: http://0.0.0.0:8088
+      KSQL_KSQL_SERVICE_ID: kafkaos_ksql_
+      KSQL_KSQL_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      KSQL_KSQL_STREAMS_AUTO_OFFSET_RESET: earliest
+      KSQL_KSQL_ADVERTISED_LISTENER: http://ksqldb-server-2:8088
+      # Needed for /clusterStatus (per-server, per-partition task
+      # assignment) to exist at all — off by default in open-source
+      # ksqlDB, and this stage's whole point is watching that
+      # assignment move as servers join/leave.
+      KSQL_KSQL_HEARTBEAT_ENABLE: "true"
+      KSQL_KSQL_LAG_REPORTING_ENABLE: "true"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_started
+
+  ksqldb-server-3:
+    image: confluentinc/ksqldb-server:0.29.0
+    container_name: ksqldb-server-3
+    ports:
+      - "8090:8088"
+    environment:
+      KSQL_BOOTSTRAP_SERVERS: kafka:19092
+      KSQL_LISTENERS: http://0.0.0.0:8088
+      KSQL_KSQL_SERVICE_ID: kafkaos_ksql_
+      KSQL_KSQL_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      KSQL_KSQL_STREAMS_AUTO_OFFSET_RESET: earliest
+      KSQL_KSQL_ADVERTISED_LISTENER: http://ksqldb-server-3:8088
+      # Needed for /clusterStatus (per-server, per-partition task
+      # assignment) to exist at all — off by default in open-source
+      # ksqlDB, and this stage's whole point is watching that
+      # assignment move as servers join/leave.
+      KSQL_KSQL_HEARTBEAT_ENABLE: "true"
+      KSQL_KSQL_LAG_REPORTING_ENABLE: "true"
     depends_on:
       kafka:
         condition: service_healthy
@@ -156,6 +243,151 @@ services:
     stdin_open: true
     depends_on:
       - ksqldb-server
+
+  # --- Stage 15: ClickHouse, wired to Kafka via the Kafka table engine --
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: clickhouse
+    ports:
+      - "8123:8123" # HTTP interface (clickhouse-client --host, curl, DBeaver, etc.)
+      - "9000:9000" # native TCP protocol
+    environment:
+      CLICKHOUSE_DB: kafkaos
+      # Unset, the image only trusts the `default` user from localhost
+      # inside its own container — real for clickhouse-client run via
+      # `docker exec`, but Kafka Connect (a different container) hitting
+      # the HTTP interface got a real auth rejection until this was set
+      # (see NOTES.md Stage 15).
+      CLICKHOUSE_PASSWORD: kafkaos
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --query 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  # --- Stage 17: Redpanda — a completely independent single node, same
+  # Kafka wire protocol. The whole point is that none of our existing
+  # kafkajs code needs to change to talk to this instead of `kafka` above —
+  # only the bootstrap address does. Kept deliberately lightweight
+  # (--smp=1 --memory=1G) given the real memory ceiling this box already
+  # hit in Stage 16 — not started by default, see NOTES.md Stage 17 for
+  # `docker compose up -d redpanda`.
+  redpanda:
+    image: redpandadata/redpanda:v24.2.7
+    container_name: redpanda
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --memory=1G
+      - --overprovisioned
+      - --reserve-memory=0M
+      - --node-id=0
+      - --check=false
+      - --kafka-addr=PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9195
+    ports:
+      - "9195:9092"
+      - "9644:9644" # admin API (health, cluster config)
+
+  # --- Stage 18: Jaeger, to visualize distributed traces propagated
+  # through Kafka message headers. All-in-one image (collector + query UI +
+  # in-memory storage) — a Go binary, deliberately the lightest tracing
+  # backend available, given this machine's memory ceiling.
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    container_name: jaeger
+    ports:
+      - "16686:16686" # Web UI
+      - "4318:4318"   # OTLP HTTP receiver (what our services export spans to)
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+
+  # --- Stage 19: Prometheus + Grafana — fleet-level visibility (lag,
+  # ISR health, throughput across every topic/consumer group at once),
+  # distinct from Stage 18's single-order tracing. kafka-exporter is
+  # deliberately used instead of the standard JMX-javaagent approach: it
+  # talks the plain Kafka protocol (no JVM agent injection into `kafka`,
+  # no separate JMX config to mount), it's a single small Go binary (real
+  # concern on this machine after Stages 16/17's OOM problems), and it
+  # already exposes exactly what this stage needs — consumer lag,
+  # per-partition ISR/under-replication, and offsets — without needing raw
+  # broker JMX at all. See NOTES.md Stage 19 for the full reasoning.
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    container_name: kafka-exporter
+    command: ["--kafka.server=kafka:19092"]
+    ports:
+      - "9308:9308"
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./src/stage19-monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./src/stage22-retry-dlq/dlq_alerts.yml:/etc/prometheus/dlq_alerts.yml:ro
+      - ./src/stage25-capstone/orderweave_alerts.yml:/etc/prometheus/orderweave_alerts.yml:ro
+    depends_on:
+      - kafka-exporter
+      - alertmanager
+
+  # --- Stage 22: Alertmanager — receives alerts Prometheus's rule
+  # evaluation fires (the DLQ rule in dlq_alerts.yml), the piece that makes
+  # this a real, verifiable alert instead of a log line, distinct from
+  # Stage 8's Connect-level DLQ which only ever logged.
+  alertmanager:
+    image: prom/alertmanager:v0.28.0
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./src/stage22-retry-dlq/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    volumes:
+      - ./src/stage19-monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./src/stage19-monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
+  # --- Stage 20: MinIO — S3-compatible object storage for the claim-check
+  # pattern. The large payload itself never touches Kafka; it lands here,
+  # and the Kafka message carries only a small reference to it.
+  minio:
+    image: minio/minio:RELEASE.2024-11-07T00-52-20Z
+    container_name: minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9002:9000" # S3 API (9000 already taken by ClickHouse's native port)
+      - "9001:9001" # web console
+    environment:
+      MINIO_ROOT_USER: kafkaos
+      MINIO_ROOT_PASSWORD: kafkaos123
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   # --- Stage 11: a separate, dedicated 3-broker cluster -----------------
   # Our main `kafka` service is single-broker and holds this whole

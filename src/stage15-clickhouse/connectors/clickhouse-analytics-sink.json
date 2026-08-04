@@ -1,0 +1,14 @@
+{
+  "connector.class": "com.clickhouse.kafka.connect.ClickHouseSinkConnector",
+  "tasks.max": "2",
+  "topics": "analytics-events-connect",
+  "hostname": "clickhouse",
+  "port": "8123",
+  "database": "kafkaos",
+  "username": "default",
+  "password": "kafkaos",
+  "ssl": "false",
+  "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+  "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+  "value.converter.schemas.enable": "false"
+}

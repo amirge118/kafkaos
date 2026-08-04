@@ -1,0 +1,16 @@
+groups:
+  - name: kafkaos-dlq
+    rules:
+      - alert: PaymentsRoutedToDLQ
+        # A 5-minute lookback (not 2) deliberately keeps a single, one-off
+        # DLQ event visible as `firing` for a comfortable, observable
+        # window, rather than flipping back to inactive almost as soon as
+        # it fires — real tuning lesson from actually watching this rule's
+        # state machine (see NOTES.md Stage 22).
+        expr: increase(payment_dlq_messages_total[5m]) > 0
+        for: 10s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Payments are being routed to the DLQ after exhausting retries"
+          description: "{{ $value }} payment message(s) exhausted all retry attempts and were routed to payments-dlq in the last 5 minutes."

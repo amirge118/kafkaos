@@ -1,0 +1,21 @@
+{
+  "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+  "database.hostname": "postgres",
+  "database.port": "5432",
+  "database.user": "kafkaos",
+  "database.password": "kafkaos",
+  "database.dbname": "kafkaos",
+  "topic.prefix": "orderweave",
+  "table.include.list": "public.capstone_outbox",
+  "plugin.name": "pgoutput",
+  "slot.name": "orderweave_outbox_slot",
+  "publication.name": "orderweave_outbox_pub",
+  "publication.autocreate.mode": "filtered",
+  "transforms": "outbox",
+  "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+  "transforms.outbox.route.by.field": "aggregatetype",
+  "transforms.outbox.route.topic.replacement": "${routedByValue}",
+  "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+  "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+  "value.converter.schemas.enable": "false"
+}

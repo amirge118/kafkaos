@@ -1,0 +1,19 @@
+{
+  "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+  "database.hostname": "postgres",
+  "database.port": "5432",
+  "database.user": "kafkaos",
+  "database.password": "kafkaos",
+  "database.dbname": "kafkaos",
+  "topic.prefix": "outbox-demo",
+  "table.include.list": "public.outbox",
+  "plugin.name": "pgoutput",
+  "slot.name": "outbox_demo_slot",
+  "publication.autocreate.mode": "filtered",
+  "transforms": "outbox",
+  "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+  "transforms.outbox.route.by.field": "aggregatetype",
+  "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+  "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+  "value.converter.schemas.enable": "false"
+}

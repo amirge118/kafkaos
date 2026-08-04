@@ -1,0 +1,16 @@
+# Stage 22: minimal Alertmanager config. No real Slack/email/PagerDuty
+# receiver is wired up here (nothing to send credentials to in a local dev
+# repo) — the point being verified is that Prometheus's alerting *engine*
+# correctly evaluates the rule and transitions it to a real `firing` alert,
+# checkable via Alertmanager's own API, not that a message physically
+# lands in someone's Slack. Swapping in a real `slack_configs`/
+# `webhook_configs` receiver here is the only change needed for that.
+route:
+  receiver: default
+  group_by: ["alertname"]
+  group_wait: 5s
+  group_interval: 30s
+  repeat_interval: 1h
+
+receivers:
+  - name: default

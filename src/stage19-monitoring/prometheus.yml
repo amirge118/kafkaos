@@ -1,0 +1,56 @@
+# Stage 19: scrape config. kafka-exporter (not a JMX javaagent — see
+# NOTES.md Stage 19 for why) is the only real target; it already exposes
+# consumer lag, per-partition ISR/under-replication, and offsets (from
+# which Grafana derives throughput via rate()) in one lightweight process.
+global:
+  scrape_interval: 5s
+  # Left unset, this defaults to 1 minute — which is exactly what made
+  # Stage 22's alert transition pending -> firing -> inactive (a real
+  # DLQ event, but only a single counter increment, not sustained) so slow
+  # that a normal-cadence poll loop kept missing the "firing" window
+  # entirely. See NOTES.md Stage 22.
+  evaluation_interval: 5s
+
+rule_files:
+  - /etc/prometheus/dlq_alerts.yml
+  - /etc/prometheus/orderweave_alerts.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  - job_name: kafka-exporter
+    static_configs:
+      - targets: ["kafka-exporter:9308"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Stage 22: the resilient-payment-service runs on the host (ts-node, not
+  # a container) — host.docker.internal is Docker Desktop's DNS name for
+  # reaching the host machine from inside a container, the same direction
+  # as every other cross-boundary connection problem this project has hit
+  # (Stage 16's advertised listeners, Stage 21's port collision), just
+  # solved with the mechanism built for exactly this case.
+  - job_name: resilient-payment-service
+    static_configs:
+      - targets: ["host.docker.internal:9301"]
+
+  # Stage 25 (Orderweave): dedicated ports (9311-9313), deliberately not
+  # reusing Stage 22's 9301 — running both demos at once would otherwise
+  # either port-collide or silently mix an unrelated demo's metrics into
+  # this job's label.
+  - job_name: orderweave-payment-service
+    static_configs:
+      - targets: ["host.docker.internal:9311"]
+
+  - job_name: orderweave-inventory-service
+    static_configs:
+      - targets: ["host.docker.internal:9312"]
+
+  - job_name: orderweave-shipping-service
+    static_configs:
+      - targets: ["host.docker.internal:9313"]
