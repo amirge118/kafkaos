@@ -69,8 +69,8 @@ failure, and partial rollback.
 ## The four guarantees, and how to verify each one yourself
 
 All commands assume `docker compose up -d` is running and
-`npm run capstone:order`, `capstone:payment`, `capstone:inventory`,
-`capstone:shipping` are each running in their own terminal (see
+`npm run orderweave:order`, `orderweave:payment`, `orderweave:inventory`,
+`orderweave:shipping` are each running in their own terminal (see
 [How to run it](#how-to-run-it) below).
 
 ### 1. Idempotent consumption — redelivery never double-applies
@@ -122,7 +122,7 @@ declined card doesn't make it valid) and skips straight to recording a
 failure; an out-of-stock inventory reservation is likewise a business
 outcome, handled by compensation (#4), not retried.
 
-**Verify it**: `npm run capstone:order` seeds a deterministic
+**Verify it**: `npm run orderweave:order` seeds a deterministic
 `order-permanent-fail-*` order; `payment-service`'s own log shows the
 attempt/backoff sequence, and `payments-dlq` receives exactly one message
 for it:
@@ -336,29 +336,29 @@ number a earlier stage in this project actually measured:
 ```bash
 docker compose up -d          # everything: Kafka, Postgres, Debezium, ClickHouse, Grafana, ...
 npm install
-docker exec -i postgres psql -U kafkaos -d kafkaos < src/stage25-capstone/schema.sql
-./src/stage25-capstone/apply-connectors.sh
+docker exec -i postgres psql -U kafkaos -d kafkaos < orderweave/db/postgres/schema.sql
+./orderweave/connect/apply-connectors.sh
 
 # four terminals, one service each:
-npm run capstone:order
-npm run capstone:payment
-npm run capstone:inventory
-npm run capstone:shipping
+npm run orderweave:order
+npm run orderweave:payment
+npm run orderweave:inventory
+npm run orderweave:shipping
 ```
 
 Grafana: `localhost:3000` → **Orderweave Overview** dashboard.
 Prometheus: `localhost:9090`. Jaeger: `localhost:16686`. Kafka UI:
 `localhost:8080`.
 
-For the ClickHouse sink specifically: `./src/stage25-capstone/apply-clickhouse.sh`
+For the ClickHouse sink specifically: `./orderweave/scripts/apply-clickhouse.sh`
 (two phases, pauses for you to confirm the raw backfill has settled before
 parsing — see [the ClickHouse section](#clickhouse-a-live-analytics-sink-and-three-more-real-failures) above for why).
 
 For the load test specifically:
 
 ```bash
-COUNT=2000000 BATCH_SIZE=2000 npm run capstone:order-loadtest
-npm run capstone:payment-batched   # instead of capstone:payment
+COUNT=2000000 BATCH_SIZE=2000 npm run orderweave:load-test
+npm run orderweave:payment-batched   # instead of orderweave:payment
 ```
 
 ## Appendix: topic / service map

@@ -1,0 +1,17 @@
+apiVersion: 1
+
+providers:
+  - name: kafkaos
+    folder: kafkaos
+    type: file
+    options:
+      path: /etc/grafana/dashboards
+  # Orderweave's dashboard lives in its own repo folder (orderweave/monitoring/dashboards/),
+  # mounted to a separate container path — nesting a second host mount inside
+  # the already read-only /etc/grafana/dashboards mount above isn't possible
+  # (Docker can't create a subdirectory inside a read-only-mounted target).
+  - name: orderweave
+    folder: orderweave
+    type: file
+    options:
+      path: /etc/grafana/dashboards-orderweave

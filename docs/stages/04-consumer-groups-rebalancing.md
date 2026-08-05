@@ -13,7 +13,7 @@ output redirected to its own log file, to simulate independent service
 instances. Two experiments were run: scaling up membership from 1 to 3
 instances, and hard-killing (`kill -9`) a member mid-run to observe failure
 detection. See
-[src/stage03-04-consumer-groups/](../../src/stage03-04-consumer-groups/).
+[course/stage03-04-consumer-groups/](../../course/stage03-04-consumer-groups/).
 
 **The real finding**: After `kill -9` on instance B2 at 11:53:14 (with
 `sessionTimeoutMs=10000`), the broker did not evict it or rebalance partition

@@ -8,6 +8,15 @@ and what we actually observed. Read top to bottom to retrace the whole journey.
 shipping), built incrementally with Node.js + TypeScript (`kafkajs`), against a
 local single-broker Kafka cluster running in Docker.
 
+**A note on file paths below (added 2026-08-05)**: shortly after Stage 25
+shipped, the repo was reorganized — `src/stageNN-xxx/` became
+`course/stageNN-xxx/`, `src/shared/` became `shared/`, and
+`src/stage25-capstone/` became the restructured `orderweave/`. This
+journal's entries are left untouched below (including every file path
+they quote) as an accurate record of what the repo looked like at the
+time each stage was written. If a path below doesn't resolve, that's why
+— check `course/`, `shared/`, or `orderweave/` for its current location.
+
 ---
 
 ## Roadmap

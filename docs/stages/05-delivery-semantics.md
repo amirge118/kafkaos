@@ -13,7 +13,7 @@ either commits-then-works or works-then-commits depending on `MODE`, and can
 be told to crash mid-run via `CRASH_AFTER`, with every unit of work appended
 to a side-effect log file). New topics `orders-semantics` and
 `orders-crash-demo` were seeded for these experiments. See
-[src/stage05-delivery-semantics/](../../src/stage05-delivery-semantics/).
+[course/stage05-delivery-semantics/](../../course/stage05-delivery-semantics/).
 
 **The real finding**: In the at-most-once crash test (commit before work,
 crash right after committing offset 3 for `order-3`), the final side-effect

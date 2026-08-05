@@ -336,9 +336,9 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./src/stage19-monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./src/stage22-retry-dlq/dlq_alerts.yml:/etc/prometheus/dlq_alerts.yml:ro
-      - ./src/stage25-capstone/orderweave_alerts.yml:/etc/prometheus/orderweave_alerts.yml:ro
+      - ./course/stage19-monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./course/stage22-retry-dlq/dlq_alerts.yml:/etc/prometheus/dlq_alerts.yml:ro
+      - ./orderweave/monitoring/alerts.yml:/etc/prometheus/orderweave_alerts.yml:ro
     depends_on:
       - kafka-exporter
       - alertmanager
@@ -353,7 +353,7 @@ services:
     ports:
       - "9093:9093"
     volumes:
-      - ./src/stage22-retry-dlq/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./course/stage22-retry-dlq/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
 
   grafana:
     image: grafana/grafana:11.3.1
@@ -365,8 +365,9 @@ services:
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
       GF_AUTH_DISABLE_LOGIN_FORM: "true"
     volumes:
-      - ./src/stage19-monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./src/stage19-monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+      - ./course/stage19-monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./course/stage19-monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+      - ./orderweave/monitoring/dashboards:/etc/grafana/dashboards-orderweave:ro
     depends_on:
       - prometheus
 

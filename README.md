@@ -97,9 +97,14 @@ or **[`NOTES.md`](./NOTES.md)** for the complete journal.
 
 ## Project layout
 
+The repo is split into two clearly separate things: the 24-stage learning
+journey (`course/`), and the capstone product it builds up to
+(`orderweave/`) — sharing one common library (`shared/`), not owned by
+either.
+
 ```
-src/
-  shared/                       # Kafka client, shared types, utilities
+shared/                          # Kafka client, tracing, shared types/utilities
+course/                          # Stages 0-24, the learning journey
   stage02-producer/
   stage03-04-consumer-groups/
   stage05-delivery-semantics/
@@ -119,7 +124,14 @@ src/
   stage22-retry-dlq/
   stage23-outbox/
   stage24-saga/
-  stage25-capstone/             # Orderweave — see ARCHITECTURE.md
+orderweave/                      # Stage 25, the capstone — see ARCHITECTURE.md
+  services/                      # order/payment/inventory/shipping-service
+  shared/                        # orderweave-local helpers (outbox parsing, metrics, ...)
+  db/                            # Postgres + ClickHouse schema
+  connect/                       # Debezium connector config
+  monitoring/                    # alert rules + its own Grafana dashboard
+  scripts/                       # load-test producer, ClickHouse apply script
+  README.md                      # orderweave's own quick start
 docs/
   stages/                       # short, skimmable per-stage pages
 docker-compose.yml               # every service used across every stage
@@ -127,7 +139,7 @@ ARCHITECTURE.md                  # Orderweave: the capstone, self-contained
 NOTES.md                         # the full journal — every stage, in order
 ```
 
-(Stages 0, 1, 11, 12, and 17 don't have their own `src/` directory —
+(Stages 0, 1, 11, 12, and 17 don't have their own `course/` directory —
 they're pure infrastructure/CLI exercises, or reuse Stage 6's services
 against a different broker/cluster shape. See their pages in
 [`docs/stages/`](./docs/stages/README.md) for exactly what was run.)

@@ -12,7 +12,7 @@ run against a repeat run, checked consumer lag via
 batch, and compared an auto-commit group against a separate manual-commit
 group (`order-processor-manual`) that committed explicitly after every
 message. See
-[src/stage03-04-consumer-groups/](../../src/stage03-04-consumer-groups/).
+[course/stage03-04-consumer-groups/](../../course/stage03-04-consumer-groups/).
 
 **The real finding**: After producing a second batch, `order-processor`
 (auto-commit, not re-run) showed lag of 4/2/2 across the three partitions,
